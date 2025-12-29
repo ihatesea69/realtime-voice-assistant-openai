@@ -1,0 +1,22 @@
+{
+  "session_id": "20251229_044424",
+  "started_at": "2025-12-29T04:44:24.265924",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Xin chào, em là Mai từ bộ phận chăm sóc khách hàng HieuNghi.",
+      "timestamp": "2025-12-29T04:45:08.357+00:00"
+    },
+    {
+      "role": "user",
+      "content": "Ok, bây giờ chúng ta sẽ mang lên cái ví dụ này cho các bạn xem thử nhé.",
+      "timestamp": "2025-12-29T04:45:15.008+00:00"
+    },
+    {
+      "role": "user",
+      "content": "Hẹn gặp lại các bạn trong những video tiếp theo nhé.",
+      "timestamp": "2025-12-29T04:45:16.569+00:00"
+    }
+  ],
+  "ended_at": "2025-12-29T04:45:20.643759"
+}

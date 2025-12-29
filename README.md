@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" />
   <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/WebRTC-333333?style=for-the-badge&logo=webrtc&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Pipecat-FF6B6B?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
@@ -24,10 +25,12 @@
 2. [Architecture](#architecture)
 3. [Technology Stack](#technology-stack)
 4. [Prerequisites](#prerequisites)
-5. [Installation](#installation)
-6. [Usage](#usage)
-7. [Demo Scenario](#demo-scenario)
-8. [License](#license)
+5. [Quick Start](#quick-start)
+6. [Docker Deployment](#docker-deployment)
+7. [Manual Installation](#manual-installation)
+8. [Demo Scenario](#demo-scenario)
+9. [Project Structure](#project-structure)
+10. [License](#license)
 
 ---
 
@@ -79,6 +82,7 @@ graph LR
 | Backend   | aiohttp        | Async HTTP server            |
 | Frontend  | React + Vite   | User interface               |
 | Styling   | Tailwind CSS   | UI styling                   |
+| Container | Docker         | Containerization             |
 
 ---
 
@@ -86,69 +90,122 @@ graph LR
 
 - Python 3.10+
 - Node.js 18+
+- Docker & Docker Compose (optional)
 - OpenAI API Key
 
 ---
 
-## Installation
+## Quick Start
+
+### Using Docker (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/YOUR_USERNAME/realtime-voice-assistant-openai.git
+cd realtime-voice-assistant-openai
+
+# Set environment variable
+export OPENAI_API_KEY=your_api_key_here
+
+# Start all services
+docker-compose up --build
+```
+
+Access:
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:7860
+
+---
+
+## Docker Deployment
+
+### Build and Run
+
+```bash
+# Build and start both services
+docker-compose up --build
+
+# Run in background
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Docker Files
+
+| File                  | Purpose                       |
+| --------------------- | ----------------------------- |
+| `Dockerfile`          | Backend Python container      |
+| `frontend/Dockerfile` | Frontend Node/Nginx container |
+| `docker-compose.yml`  | Multi-container orchestration |
+| `frontend/nginx.conf` | Nginx SPA configuration       |
+
+### Environment Variables
+
+```bash
+# Required
+OPENAI_API_KEY=sk-...
+
+# Optional (for cloud deployment)
+HOST=0.0.0.0
+PORT=7860
+```
+
+---
+
+## Manual Installation
 
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pipecat-openai-voice-agent.git
-cd pipecat-openai-voice-agent
+git clone https://github.com/YOUR_USERNAME/realtime-voice-assistant-openai.git
+cd realtime-voice-assistant-openai
 ```
 
 ### 2. Backend Setup
 
 ```bash
-# Create virtual environment with uv
-uv venv
+# Create virtual environment
+python -m venv .venv
 .venv\Scripts\activate  # Windows
 # source .venv/bin/activate  # Linux/macOS
 
 # Install dependencies
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
+
+# Start server
+python main.py
 ```
+
+Server runs at http://localhost:7860
 
 ### 3. Frontend Setup
 
 ```bash
 cd frontend
 npm install
-```
-
----
-
-## Usage
-
-### Start Backend
-
-```bash
-python main.py
-```
-
-Server runs at http://localhost:7860
-
-### Start Frontend
-
-```bash
-cd frontend
 npm run dev
 ```
 
 UI runs at http://localhost:5173
 
-### Connect
+---
+
+## Usage
 
 1. Open http://localhost:5173 in browser
 2. Select audio input/output devices
 3. Click "Start Conversation"
-4. Speak to the voice agent
+4. Speak to the voice agent in Vietnamese
 
 ---
 
@@ -172,16 +229,21 @@ See [scenario.md](scenario.md) for detailed conversation flow.
 
 ```
 ├── main.py                 # Entry point
+├── Dockerfile              # Backend container
+├── docker-compose.yml      # Container orchestration
+├── requirements.txt        # Python dependencies
+├── .env.example            # Environment template
 ├── src/
 │   ├── bot.py              # WebRTC server & pipeline
 │   ├── flow.py             # Conversation flow logic
 │   └── prompt.py           # System & task prompts
 ├── frontend/
+│   ├── Dockerfile          # Frontend container
+│   ├── nginx.conf          # Nginx config
 │   └── src/
 │       └── App.tsx         # React UI
 ├── transcripts/            # Saved conversation logs
-├── scenario.md             # Demo scenario documentation
-└── .env.example            # Environment template
+└── scenario.md             # Demo scenario docs
 ```
 
 ---
@@ -191,8 +253,6 @@ See [scenario.md](scenario.md) for detailed conversation flow.
 Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
-
-## Contact
 
 <p align="center">
   <a href="https://github.com/pipecat-ai/pipecat"><img src="https://img.shields.io/badge/Pipecat_AI-Framework-FF6B6B?style=for-the-badge" /></a>

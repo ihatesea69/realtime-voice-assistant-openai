@@ -307,13 +307,16 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     
-    site = web.TCPSite(runner, 'localhost', 7860)
+    # Support Docker/cloud deployment via env vars
+    host = os.getenv("HOST", "localhost")
+    port = int(os.getenv("PORT", 7860))
+    
+    site = web.TCPSite(runner, host, port)
     await site.start()
     
-    logger.info("✅ Server started at http://localhost:7860")
-    logger.info("📱 WebRTC endpoint: POST http://localhost:7860/offer")
-    logger.info("📡 WebSocket endpoint: WS http://localhost:7860/ws")
-    logger.info("🌐 React UI: http://localhost:5173")
+    logger.info(f"✅ Server started at http://{host}:{port}")
+    logger.info(f"📱 WebRTC endpoint: POST http://{host}:{port}/offer")
+    logger.info(f"📡 WebSocket endpoint: WS ws://{host}:{port}/ws")
     
     try:
         while True:
