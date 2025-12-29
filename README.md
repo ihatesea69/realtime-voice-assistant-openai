@@ -2,22 +2,19 @@
 
 <!-- BADGES -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/AWS-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white" />
-  <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/WebRTC-333333?style=for-the-badge&logo=webrtc&logoColor=white" />
+  <img src="https://img.shields.io/badge/Pipecat-FF6B6B?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
-<h1 align="center">Project Name</h1>
+<h1 align="center">Real-time Voice Agent with OpenAI</h1>
 
 <p align="center">
-  A brief description of what this project does and its main purpose.
+  AI-powered voice assistant for customer support using Pipecat framework with OpenAI Whisper STT, GPT-4o, and TTS. WebRTC-based real-time communication with React UI.
 </p>
-
-> [!TIP] > **Template Usage**: Click the "Use this template" button above to create a new repository from this template.
-> After creating your repository, search for TODO placeholders and replace them with your project details.
 
 ---
 
@@ -29,94 +26,96 @@
 4. [Prerequisites](#prerequisites)
 5. [Installation](#installation)
 6. [Usage](#usage)
-7. [Configuration](#configuration)
-8. [Deployment](#deployment)
-9. [API Reference](#api-reference)
-10. [Troubleshooting](#troubleshooting)
-11. [Contributing](#contributing)
-12. [License](#license)
+7. [Demo Scenario](#demo-scenario)
+8. [License](#license)
 
 ---
 
 ## Overview
 
-Provide a detailed description of the project, its goals, and key features.
+A real-time voice agent demonstrating customer support capabilities with:
 
-### Key Features
-
-- Feature 1: Description
-- Feature 2: Description
-- Feature 3: Description
+- Real-time bidirectional voice via WebRTC
+- Speech-to-Text using OpenAI Whisper
+- LLM responses via GPT-4o-mini
+- Text-to-Speech using OpenAI TTS
+- Live transcript streaming via WebSocket
+- Modern React UI with navy blue theme
+- Vietnamese language support
 
 ---
 
 ## Architecture
 
-For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
 ```mermaid
-graph TD
-    User[User] -->|HTTPS| Frontend[Frontend]
-    Frontend -->|API| Backend[Backend API]
-    Backend -->|Read/Write| DB[(Database)]
+graph LR
+    subgraph Frontend
+        UI[React UI<br/>Vite + Tailwind]
+    end
+
+    subgraph Backend
+        Server[Pipecat Server<br/>aiohttp]
+        STT[OpenAI Whisper<br/>STT]
+        LLM[GPT-4o-mini<br/>LLM]
+        TTS[OpenAI TTS<br/>TTS]
+    end
+
+    UI <-->|WebRTC| Server
+    UI <-->|WebSocket| Server
+    Server --> STT --> LLM --> TTS --> Server
 ```
 
 ---
 
 ## Technology Stack
 
-| Component      | Technology       | Purpose          |
-| -------------- | ---------------- | ---------------- |
-| Backend        | Python/FastAPI   | API server       |
-| Frontend       | React/TypeScript | User interface   |
-| Database       | PostgreSQL       | Data persistence |
-| Infrastructure | Terraform        | IaC provisioning |
-| Container      | Docker           | Containerization |
+| Component | Technology     | Purpose                      |
+| --------- | -------------- | ---------------------------- |
+| Framework | Pipecat AI     | Voice pipeline orchestration |
+| STT       | OpenAI Whisper | Speech-to-Text               |
+| LLM       | GPT-4o-mini    | Conversation AI              |
+| TTS       | OpenAI TTS     | Text-to-Speech               |
+| Transport | WebRTC         | Real-time audio streaming    |
+| Backend   | aiohttp        | Async HTTP server            |
+| Frontend  | React + Vite   | User interface               |
+| Styling   | Tailwind CSS   | UI styling                   |
 
 ---
 
 ## Prerequisites
 
-### Required Software
-
-- Python 3.11 or higher
-- Node.js 20 or higher
-- Docker and Docker Compose
-- Terraform 1.0 or higher
-- AWS CLI v2
-
-### Required API Keys
-
-See [.env.example](.env.example) for required environment variables.
+- Python 3.10+
+- Node.js 18+
+- OpenAI API Key
 
 ---
 
 ## Installation
 
-### Clone Repository
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/username/repository.git
-cd repository
+git clone https://github.com/YOUR_USERNAME/pipecat-openai-voice-agent.git
+cd pipecat-openai-voice-agent
 ```
 
-### Backend Setup
+### 2. Backend Setup
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# .venv\Scripts\activate   # Windows
+# Create virtual environment with uv
+uv venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/macOS
 
 # Install dependencies
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env and add your OPENAI_API_KEY
 ```
 
-### Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -127,87 +126,63 @@ npm install
 
 ## Usage
 
-### Development Mode
+### Start Backend
 
 ```bash
-# Start backend
 python main.py
+```
 
-# Start frontend (in another terminal)
+Server runs at http://localhost:7860
+
+### Start Frontend
+
+```bash
 cd frontend
 npm run dev
 ```
 
-### Docker Compose
+UI runs at http://localhost:5173
 
-```bash
-docker-compose up
+### Connect
+
+1. Open http://localhost:5173 in browser
+2. Select audio input/output devices
+3. Click "Start Conversation"
+4. Speak to the voice agent
+
+---
+
+## Demo Scenario
+
+The voice agent demonstrates customer support with:
+
+| Type      | Description               |
+| --------- | ------------------------- |
+| Product   | Product/service inquiries |
+| Order     | Order status checks       |
+| Technical | Technical support         |
+| Complaint | Complaints and feedback   |
+| General   | General questions         |
+
+See [scenario.md](scenario.md) for detailed conversation flow.
+
+---
+
+## Project Structure
+
 ```
-
----
-
-## Configuration
-
-### Environment Variables
-
-See [.env.example](.env.example) for a complete list of configuration options.
-
-| Variable     | Required | Default | Description                |
-| ------------ | -------- | ------- | -------------------------- |
-| API_KEY      | Yes      | -       | API key for service        |
-| DATABASE_URL | Yes      | -       | Database connection string |
-| DEBUG        | No       | false   | Enable debug mode          |
-| PORT         | No       | 8000    | Server port                |
-
----
-
-## Deployment
-
-For detailed deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
----
-
-## API Reference
-
-For detailed API documentation, see [docs/API.md](docs/API.md).
-
-### Health Check
-
-#### GET /health
-
-Response:
-
-```json
-{
-  "status": "healthy"
-}
+├── main.py                 # Entry point
+├── src/
+│   ├── bot.py              # WebRTC server & pipeline
+│   ├── flow.py             # Conversation flow logic
+│   └── prompt.py           # System & task prompts
+├── frontend/
+│   └── src/
+│       └── App.tsx         # React UI
+├── transcripts/            # Saved conversation logs
+├── scenario.md             # Demo scenario documentation
+└── .env.example            # Environment template
 ```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-#### Issue 1: Connection Error
-
-Solution: Verify network connectivity and firewall rules.
-
-#### Issue 2: Authentication Failed
-
-Solution: Check API key configuration in environment variables.
-
----
-
-## Contributing
-
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/improvement`)
-3. Commit changes (`git commit -m 'Add improvement'`)
-4. Push to branch (`git push origin feature/improvement`)
-5. Open a Pull Request
 
 ---
 
@@ -220,9 +195,6 @@ Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 ## Contact
 
 <p align="center">
-  <a href="https://linkedin.com/in/username"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" /></a>
-  <a href="https://github.com/username"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" /></a>
-  <a href="mailto:email@example.com"><img src="https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white" /></a>
+  <a href="https://github.com/pipecat-ai/pipecat"><img src="https://img.shields.io/badge/Pipecat_AI-Framework-FF6B6B?style=for-the-badge" /></a>
+  <a href="https://platform.openai.com"><img src="https://img.shields.io/badge/OpenAI-API-412991?style=for-the-badge&logo=openai&logoColor=white" /></a>
 </p>
-
-Project Link: https://github.com/username/repository
