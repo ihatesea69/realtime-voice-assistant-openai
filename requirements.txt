@@ -1,0 +1,12 @@
+python-dotenv
+fastapi[all]
+uvicorn
+websockets==13.1
+pipecat-ai[daily,aws,silero,elevenlabs,webrtc,aws-nova-sonic]==0.0.91
+pipecat-ai-flows==0.0.17
+twilio
+pipecat-ai[soundfile]
+google.genai
+pipecat-ai-small-webrtc-prebuilt
+anthropic
+
