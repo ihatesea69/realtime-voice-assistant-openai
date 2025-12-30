@@ -39,27 +39,14 @@ TURN_USERNAME = os.getenv("TURN_USERNAME", "211edaaa6d320db0be95b365")
 TURN_CREDENTIAL = os.getenv("TURN_CREDENTIAL", "WFn/hIuZNhCl20Iz")
 
 ice_servers = [
-    IceServer(urls="stun:stun.relay.metered.ca:80"),
+    # Start with simple UDP TURN configuration to ensure basic connectivity
     IceServer(
         urls="turn:global.relay.metered.ca:80",
         username=TURN_USERNAME,
         credential=TURN_CREDENTIAL
     ),
-    IceServer(
-        urls="turn:global.relay.metered.ca:80?transport=tcp",
-        username=TURN_USERNAME,
-        credential=TURN_CREDENTIAL
-    ),
-    IceServer(
-        urls="turn:global.relay.metered.ca:443",
-        username=TURN_USERNAME,
-        credential=TURN_CREDENTIAL
-    ),
-    IceServer(
-        urls="turns:global.relay.metered.ca:443?transport=tcp",
-        username=TURN_USERNAME,
-        credential=TURN_CREDENTIAL
-    ),
+    # Backup STUN
+    IceServer(urls="stun:stun.relay.metered.ca:80"),
 ]
 
 # Debug: Log ICE servers configuration
