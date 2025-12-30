@@ -2,7 +2,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -43,6 +43,11 @@ variable "github_repo" {
   description = "GitHub repository URL"
   type        = string
   default     = "https://github.com/ihatesea69/realtime-voice-assistant-openai.git"
+}
+
+variable "owner" {
+  description = "Owner tag for resources"
+  type        = string
 }
 
 # Get latest Ubuntu 22.04 AMI
@@ -111,7 +116,8 @@ resource "aws_security_group" "voice_agent" {
   }
 
   tags = {
-    Name = "hieunghi-voice-agent-sg"
+    Name  = "hieunghi-voice-agent-sg"
+    Owner = var.owner
   }
 }
 
@@ -133,7 +139,8 @@ resource "aws_instance" "voice_agent" {
   }))
 
   tags = {
-    Name = "hieunghi-voice-agent"
+    Name  = "hieunghi-voice-agent"
+    Owner = var.owner
   }
 }
 
