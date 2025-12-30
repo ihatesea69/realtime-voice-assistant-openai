@@ -7,36 +7,66 @@ echo "Starting setup at $(date)"
 
 # Update system
 apt-get update
-# Skipping full upgrade to save time, install only necessities
 # apt-get upgrade -y
 
-# Install Docker, Nginx, Certbot
-apt-get install -y docker.io docker-compose git nginx certbot python3-certbot-nginx
+# Install Docker, Nginx, CoTURN
+apt-get install -y docker.io docker-compose git nginx coturn curl
 systemctl start docker
 systemctl enable docker
 usermod -aG docker ubuntu
 
-# Clone repository
+# --- CoTURN Setup (Self-Hosted TURN) ---
+echo "Configuring CoTURN..."
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+# Enable CoTURN daemon
+sed -i 's/#TURNSERVER_ENABLED=1/TURNSERVER_ENABLED=1/g' /etc/default/coturn
+
+# Configure turnserver.conf
+cat > /etc/turnserver.conf << EOF
+listening-port=3478
+external-ip=$PUBLIC_IP
+fingerprint
+lt-cred-mech
+user=hieunghi:voiceagent
+realm=voiceagent
+min-port=49152
+max-port=65535
+log-file=/var/log/turnserver.log
+verbose
+EOF
+
+systemctl restart coturn
+echo "CoTURN configured with IP: $PUBLIC_IP"
+
+# --- Repository Setup ---
 cd /home/ubuntu
 git clone ${github_repo} voice-agent
 cd voice-agent
 
-# Create .env file with Credentials
+# Create .env file for Backend
+# Note: TURN_HOST is now the EC2 Public IP (or CloudFront if using specific routing, but TURN needs IP)
+# Backend will use internal TURN config or we pass this env.
 cat > .env << EOF
 OPENAI_API_KEY=${openai_api_key}
-TURN_USERNAME=${turn_username}
-TURN_CREDENTIAL=${turn_credential}
+TURN_USERNAME=hieunghi
+TURN_CREDENTIAL=voiceagent
+TURN_HOST=$PUBLIC_IP
+TURN_PORT=3478
 EOF
 
-# Nginx Configuration
-if [ ! -z "${domain_name}" ]; then
-    echo "Configuring Nginx for domain: ${domain_name}"
-    
-    cat > /etc/nginx/sites-available/voice-agent << EOF
-server {
-    server_name ${domain_name};
+# --- Nginx Setup (HTTP Only - CloudFront handles SSL) ---
+echo "Configuring Nginx..."
 
-    # Frontend Proxy (Vite port 5173)
+cat > /etc/nginx/sites-available/voice-agent << EOF
+server {
+    listen 80;
+    server_name _; # Catch all (CloudFront requests)
+
+    # Allow large bodies if needed
+    client_max_body_size 10M;
+
+    # Frontend Proxy
     location / {
         proxy_pass http://localhost:5173;
         proxy_http_version 1.1;
@@ -46,7 +76,7 @@ server {
         proxy_cache_bypass \$http_upgrade;
     }
 
-    # Backend API Proxy (Pipecat port 7860)
+    # Backend API Proxy
     location /offer {
         proxy_pass http://127.0.0.1:7860;
         proxy_set_header Host \$host;
@@ -55,7 +85,7 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    # Backend WebSocket Proxy (Pipecat port 7860)
+    # WebSocket Proxy
     location /ws {
         proxy_pass http://127.0.0.1:7860;
         proxy_http_version 1.1;
@@ -63,27 +93,14 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
     }
-
-    # Listen on HTTP (Certbot will upgrade to HTTPS later)
-    listen 80;
 }
 EOF
 
-    # Enable Site
-    rm -f /etc/nginx/sites-enabled/default
-    ln -s /etc/nginx/sites-available/voice-agent /etc/nginx/sites-enabled/
-    systemctl restart nginx
+rm -f /etc/nginx/sites-enabled/default
+ln -s /etc/nginx/sites-available/voice-agent /etc/nginx/sites-enabled/
+systemctl restart nginx
 
-    # Create SSL setup script for manual execution (Certbot often requires interaction or DNS verification)
-    echo "#!/bin/bash" > /home/ubuntu/setup_ssl.sh
-    echo "certbot --nginx -d ${domain_name} --non-interactive --agree-tos -m admin@${domain_name} --redirect" >> /home/ubuntu/setup_ssl.sh
-    chmod +x /home/ubuntu/setup_ssl.sh
-    
-    # Try to verify ownership (optional, might fail if DNS isn't propagated)
-    # /home/ubuntu/setup_ssl.sh || echo "SSL setup failed (likely DNS), run manually later."
-fi
-
-# Create production docker-compose
+# --- Docker Compose Setup ---
 cat > docker-compose.prod.yml << 'EOF'
 services:
   backend:

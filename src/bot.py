@@ -33,21 +33,42 @@ routes = RouteTableDef()
 # WebSocket connections for transcript streaming
 ws_connections = set()
 
-# ICE servers for NAT traversal
-# TURN credentials from Metered.ca (free tier)
-TURN_USERNAME = os.getenv("TURN_USERNAME", "211edaaa6d320db0be95b365")
-TURN_CREDENTIAL = os.getenv("TURN_CREDENTIAL", "WFn/hIuZNhCl20Iz")
+# ICE Configuration Strategy
+# 1. Self-Hosted CoTURN (Preferred)
+TURN_HOST = os.getenv("TURN_HOST")
+TURN_PORT = os.getenv("TURN_PORT", "3478")
+# 2. Metered.ca (Fallback)
+METERED_USERNAME = os.getenv("TURN_USERNAME", "211edaaa6d320db0be95b365")
+METERED_CREDENTIAL = os.getenv("TURN_CREDENTIAL", "WFn/hIuZNhCl20Iz")
 
-ice_servers = [
-    # Use TCP TURN on port 443 (HTTPS-like) to bypass aggressive firewalls/UDP blocks
-    IceServer(
+ice_servers = []
+
+if TURN_HOST:
+    # CoTURN configuration
+    logger.info(f"Using Self-Hosted TURN at {TURN_HOST}:{TURN_PORT}")
+    # TCP Listener (Signaling)
+    ice_servers.append(IceServer(
+        urls=f"turn:{TURN_HOST}:{TURN_PORT}?transport=tcp",
+        username=METERED_USERNAME, # Reusing env var names for simplicity in user_data
+        credential=METERED_CREDENTIAL
+    ))
+    # UDP Listener
+    ice_servers.append(IceServer(
+        urls=f"turn:{TURN_HOST}:{TURN_PORT}?transport=udp",
+        username=METERED_USERNAME,
+        credential=METERED_CREDENTIAL
+    ))
+else:
+    # Metered.ca configuration
+    logger.info("Using Metered.ca TURN")
+    ice_servers.append(IceServer(
         urls="turn:global.relay.metered.ca:443?transport=tcp",
-        username=TURN_USERNAME,
-        credential=TURN_CREDENTIAL
-    ),
-    # Backup STUN (standard)
-    IceServer(urls="stun:stun.relay.metered.ca:80"),
-]
+        username=METERED_USERNAME,
+        credential=METERED_CREDENTIAL
+    ))
+
+# Always add Google STUN as backup
+ice_servers.append(IceServer(urls="stun:stun.l.google.com:19302"))
 
 # Debug: Log ICE servers configuration
 logger.info(f"🧊 ICE servers configured: {len(ice_servers)} servers")
@@ -183,11 +204,28 @@ async def run_bot(webrtc_connection, ws_connections):
     runner = PipelineRunner()
     await runner.run(task)
     
-    # Save final transcript
     transcript_data["ended_at"] = datetime.now().isoformat()
     with open(transcript_file, 'w', encoding='utf-8') as f:
         json.dump(transcript_data, f, ensure_ascii=False, indent=2)
     logger.info(f"💾 Transcript saved to {transcript_file}")
+
+
+@routes.get("/turn-config")
+async def get_turn_config(request):
+    """Return backend ICE configuration for frontend."""
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+    }
+    frontend_ice = []
+    for server in ice_servers:
+        frontend_ice.append({
+            "urls": server.urls,
+            "username": server.username,
+            "credential": server.credential
+        })
+    
+    return web.json_response(frontend_ice, headers=headers)
+
 
 
 @routes.post("/offer")

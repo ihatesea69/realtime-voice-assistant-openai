@@ -136,13 +136,39 @@ resource "aws_security_group" "voice_agent" {
     description = "Backend API"
   }
 
-  # WebRTC UDP ports
+  # WebRTC UDP ports (Media)
   ingress {
     from_port   = 40000
     to_port     = 40100
     protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "WebRTC media"
+  }
+
+  # CoTURN Signaling (TCP/UDP)
+  ingress {
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "TURN Signaling TCP"
+  }
+
+  ingress {
+    from_port   = 3478
+    to_port     = 3478
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "TURN Signaling UDP"
+  }
+
+  # CoTURN Relay Ports (UDP)
+  ingress {
+    from_port   = 49152
+    to_port     = 65535
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "TURN Relay UDP"
   }
 
   # Outbound
@@ -155,6 +181,83 @@ resource "aws_security_group" "voice_agent" {
 
   tags = {
     Name  = "hieunghi-voice-agent-sg"
+    Owner = var.owner
+  }
+}
+
+# CloudFront Distribution
+resource "aws_cloudfront_distribution" "voice_agent_cdn" {
+  origin {
+    domain_name = aws_instance.voice_agent.public_dns
+    origin_id   = "EC2Origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only" # CloudFront -> EC2 is HTTP
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "HieuNghi Voice Agent CDN"
+  default_root_object = "index.html"
+
+  # Default Cache Behavior (Frontend)
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "EC2Origin"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"] # Forward all headers (Host, Upgrade, etc.)
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0 # Disable caching for now to avoid issues
+    max_ttl                = 0
+  }
+
+  # API Cache Behavior
+  ordered_cache_behavior {
+    path_pattern     = "/offer"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "EC2Origin"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  # Viewer Certificate (Default *.cloudfront.net HTTPS)
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tags = {
+    Name  = "hieunghi-voice-agent-cdn"
     Owner = var.owner
   }
 }
@@ -199,6 +302,11 @@ output "frontend_url" {
 output "backend_url" {
   description = "Backend URL"
   value       = "http://${aws_instance.voice_agent.public_ip}:7860"
+}
+
+output "cloudfront_url" {
+  description = "CloudFront URL (HTTPS)"
+  value       = "https://${aws_cloudfront_distribution.voice_agent_cdn.domain_name}"
 }
 
 output "ssh_command" {

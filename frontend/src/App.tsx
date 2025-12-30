@@ -18,24 +18,27 @@ class WebRTCClient {
   public onStateChange?: (state: string) => void;
 
   constructor() {
-    // ICE servers for NAT traversal
-    // STUN: discovers public IP
-    // TURN: relays media when P2P fails (required for most cloud deployments)
-    // Credentials from environment variables with fallback
-    const turnUsername = import.meta.env.VITE_TURN_USERNAME || "211edaaa6d320db0be95b365";
-    const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL || "WFn/hIuZNhCl20Iz";
-    
-    // Match Backend ICE config: TCP TURN preference for firewall traversal
-    this.pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "turn:global.relay.metered.ca:443?transport=tcp",
-          username: turnUsername,
-          credential: turnCredential
-        },
-        { urls: "stun:stun.relay.metered.ca:80" },
-      ],
-    });
+    // Initialization moved to async initialize()
+  }
+
+  private async initializePC(baseUrl: string) {
+    if (this.pc) return;
+
+    try {
+      console.log("Fetching ICE config from:", `${baseUrl}/turn-config`);
+      const response = await fetch(`${baseUrl}/turn-config`);
+      const iceServers = await response.json();
+      console.log("Using ICE Servers:", iceServers);
+
+      this.pc = new RTCPeerConnection({
+        iceServers: iceServers
+      });
+    } catch (error) {
+      console.error("Failed to fetch ICE config, falling back to STUN:", error);
+      this.pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      });
+    }
 
     this.pc.onconnectionstatechange = () => {
       console.log("Connection state:", this.pc?.connectionState);
@@ -53,24 +56,15 @@ class WebRTCClient {
         if (!this.remoteAudio) {
           this.remoteAudio = new Audio();
           this.remoteAudio.autoplay = true;
-          // Some browsers require the audio element to be in DOM
           document.body.appendChild(this.remoteAudio);
         }
         
         const remoteStream = new MediaStream([event.track]);
         this.remoteAudio.srcObject = remoteStream;
         
-        // Explicit play with error handling for autoplay policy
         this.remoteAudio.play()
-          .then(() => {
-            console.log("✅ Audio playback started successfully");
-          })
-          .catch((err) => {
-            console.error("❌ Audio playback failed:", err);
-            // User needs to interact with page first
-          });
-        
-        console.log("Audio connected and playing");
+          .then(() => console.log("✅ Audio playback started"))
+          .catch((err) => console.error("❌ Audio playback failed:", err));
       }
     };
   }
@@ -107,6 +101,10 @@ class WebRTCClient {
 
   async startBotAndConnect(options: { endpoint: string; audioInput?: string; audioOutput?: string }) {
     try {
+      // Initialize PC with dynamic ICE config from backend
+      const baseUrl = options.endpoint.replace('/offer', '');
+      await this.initializePC(baseUrl);
+
       console.log("🎤 Getting user media...");
       const constraints: MediaStreamConstraints = {
         audio: options.audioInput ? { deviceId: { exact: options.audioInput } } : true,
