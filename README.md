@@ -2,19 +2,21 @@
 
 <!-- BADGES -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" />
   <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/WebRTC-333333?style=for-the-badge&logo=webrtc&logoColor=white" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
-  <img src="https://img.shields.io/badge/Pipecat-FF6B6B?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
-<h1 align="center">Real-time Voice Agent with OpenAI</h1>
+<h1 align="center">HieuNghi Voice Agent</h1>
 
 <p align="center">
-  AI-powered voice assistant for customer support using Pipecat framework with OpenAI Whisper STT, GPT-4o, and TTS. WebRTC-based real-time communication with React UI.
+  A robust, real-time customer support voice agent built with <b>Pipecat</b> and <b>OpenAI</b>.
+  <br />
+  Features low-latency WebRTC audio, comprehensive deployment scripts (Docker + Terraform), and Vietnamese language support.
 </p>
 
 ---
@@ -23,28 +25,25 @@
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Technology Stack](#technology-stack)
+3. [Features](#features)
 4. [Prerequisites](#prerequisites)
-5. [Quick Start](#quick-start)
-6. [Docker Deployment](#docker-deployment)
-7. [Manual Installation](#manual-installation)
-8. [Demo Scenario](#demo-scenario)
-9. [Project Structure](#project-structure)
-10. [License](#license)
+5. [Local Development](#local-development)
+6. [Deployment on AWS (Terraform)](#deployment-on-aws-terraform)
+7. [WebRTC & TURN Configuration](#webrtc--turn-configuration)
+8. [Project Structure](#project-structure)
+9. [Changelog](#changelog)
 
 ---
 
 ## Overview
 
-A real-time voice agent demonstrating customer support capabilities with:
+**HieuNghi Voice Agent** replaces legacy systems with a modern, AI-driven stack. It handles customer support scenarios such as product inquiries, order checking, and technical support via natural voice conversation.
 
-- Real-time bidirectional voice via WebRTC
-- Speech-to-Text using OpenAI Whisper
-- LLM responses via GPT-4o-mini
-- Text-to-Speech using OpenAI TTS
-- Live transcript streaming via WebSocket
-- Modern React UI with navy blue theme
-- Vietnamese language support
+**Key capabilities:**
+
+- **Full Duplex Audio**: Speak and listen simultaneously.
+- **Vietnamese Support**: Optimized prompts and TTS for Vietnamese customers.
+- **Production Ready**: Includes Nginx reverse proxy, SSL setup, and infrastructure-as-code.
 
 ---
 
@@ -52,263 +51,182 @@ A real-time voice agent demonstrating customer support capabilities with:
 
 ```mermaid
 graph LR
-    subgraph Frontend
-        UI[React UI<br/>Vite + Tailwind]
+    subgraph Client
+        Browser[React Frontend]
     end
 
-    subgraph Backend
-        Server[Pipecat Server<br/>aiohttp]
-        STT[OpenAI Whisper<br/>STT]
-        LLM[GPT-4o-mini<br/>LLM]
-        TTS[OpenAI TTS<br/>TTS]
+    subgraph AWS EC2
+        Nginx[Nginx Reverse Proxy]
+        Backend[Python Pipecat Server]
     end
 
-    UI <-->|WebRTC| Server
-    UI <-->|WebSocket| Server
-    Server --> STT --> LLM --> TTS --> Server
+    subgraph External Services
+        OpenAI[OpenAI API<br/>(Whisper/GPT-4o/TTS)]
+        Metered[Metered.ca TURN]
+    end
+
+    Browser <-->|HTTPS/WSS| Nginx
+    Nginx <-->|HTTP/WS| Backend
+    Browser <-->|WebRTC (UDP/TCP)| Backend
+    Browser -.->|TURN Relay| Metered
+    Backend -.->|TURN Relay| Metered
+    Backend <-->|API| OpenAI
 ```
 
 ---
 
-## Technology Stack
+## Features
 
-| Component | Technology     | Purpose                      |
-| --------- | -------------- | ---------------------------- |
-| Framework | Pipecat AI     | Voice pipeline orchestration |
-| STT       | OpenAI Whisper | Speech-to-Text               |
-| LLM       | GPT-4o-mini    | Conversation AI              |
-| TTS       | OpenAI TTS     | Text-to-Speech               |
-| Transport | WebRTC         | Real-time audio streaming    |
-| Backend   | aiohttp        | Async HTTP server            |
-| Frontend  | React + Vite   | User interface               |
-| Styling   | Tailwind CSS   | UI styling                   |
-| Container | Docker         | Containerization             |
+- **OpenAI Stack**:
+  - **STT**: OpenAI Whisper
+  - **LLM**: GPT-4o-mini (Context-aware customer support persona)
+  - **TTS**: OpenAI TTS (hd quality)
+- **UI/UX**:
+  - Professional Navy Blue theme.
+  - Real-time audio visualization.
+  - Streaming transcripts.
+- **Infrastructure**:
+  - **Docker**: Full containerization.
+  - **Terraform**: One-click infrastructure provisioning.
+  - **Networking**: TURN (TCP/UDP) support for reliable connections behind firewalls.
 
 ---
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- Docker & Docker Compose (optional)
-- OpenAI API Key
+- **Docker** & **Docker Compose**
+- **OpenAI API Key**
+- **Metered.ca Account** (Free tier) for TURN credentials (optional for local, required for cloud).
 
 ---
 
-## Quick Start
+## Local Development
 
-### Using Docker (Recommended)
+1. **Clone the repository:**
 
-```bash
-# Clone repository
-git clone https://github.com/YOUR_USERNAME/realtime-voice-assistant-openai.git
-cd realtime-voice-assistant-openai
+   ```bash
+   git clone https://github.com/ihatesea69/realtime-voice-assistant-openai.git
+   cd realtime-voice-assistant-openai
+   ```
 
-# Set environment variable
-export OPENAI_API_KEY=your_api_key_here
+2. **Configure Environment:**
 
-# Start all services
-docker-compose up --build
-```
+   ```bash
+   cp .env.example .env
+   # Edit .env and enter your OPENAI_API_KEY
+   ```
 
-Access:
+3. **Start with Docker (Recommended):**
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:7860
+   ```bash
+   docker-compose up --build
+   ```
 
----
-
-## Docker Deployment
-
-### 1. Build and Run
-
-#### Configure Environment
-
-```bash
-cp .env.example .env
-# Edit .env to include your OPENAI_API_KEY
-```
-
-#### Build Containers
-
-```bash
-docker-compose up --build
-```
-
-#### Run Options
-
-**Linux (Recommended)**
-Use host networking for best WebRTC performance:
-
-```bash
-# In docker-compose.yml or command line
-network_mode: "host"
-```
-
-**macOS / Windows (Docker Desktop)**
-Docker Desktop restricts host networking. Use port forwarding:
-
-```bash
-# Default configuration in docker-compose.yml
-ports:
-  - "7860:7860"
-  - "5173:80"
-```
-
-**Note:** On Windows/macOS, direct P2P connections might fail behind strict NATs. A TURN server is often required for production.
+4. **Access:**
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:7860`
 
 ---
 
-### 2. WebRTC ICE Configuration
+## Deployment on AWS (Terraform)
 
-For local development, STUN servers usually suffice. If deploying to production or facing connection issues:
+This project includes a production-ready Terraform configuration to deploy to AWS EC2.
 
-**STUN (Session Traversal Utilities for NAT)**
-Helps clients discover their public IP.
-Default: `stun:stun.l.google.com:19302`
+### 1. Setup Terraform Variables
 
-**TURN (Traversal Using Relays around NAT)**
-Required if P2P fails (symmetric NATs, firewalls).
-RELAYS media traffic between peers.
+Navigate to the `terraform/` directory and configure your secrets.
 
-To configure custom ICE servers, update `frontend/src/App.tsx`:
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+```
 
-```javascript
-const config = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    // Add TURN server here if needed
-    // {
-    //   urls: "turn:your-turn-server.com",
-    //   username: "user",
-    //   credential: "password"
-    // }
-  ],
-};
+Edit `terraform.tfvars`:
+
+```hcl
+aws_region      = "ap-southeast-1"
+key_name        = "your-aws-keypair"
+openai_api_key  = "sk-..."
+turn_username   = "your-metered-username"
+turn_credential = "your-metered-credential"
+domain_name     = "your-domain.com"
+```
+
+### 2. Deploy Infrastructure
+
+```bash
+terraform init
+terraform apply
+```
+
+_This will provision an EC2 instance, Security Group, and automatically install Docker, Nginx, and the Application._
+
+### 3. Setup SSL (HTTPS)
+
+SSH into your new instance (IP output by Terraform):
+
+```bash
+ssh -i ~/.ssh/your-key.pem ubuntu@<EC2_PUBLIC_IP>
+```
+
+Run the prepared SSL setup script (ensure your DNS A record points to the IP first):
+
+```bash
+sudo ./setup_ssl.sh
 ```
 
 ---
 
-### 3. Docker Maintenance
+## WebRTC & TURN Configuration
 
-```bash
-# Run in background
-docker-compose up -d
+WebRTC often fails in cloud environments due to NAT/Firewalls. We solved this by:
 
-# View logs
-docker-compose logs -f
+1.  **TURN Server**: Integrating Metered.ca.
+2.  **TCP Transport**: Configuring `transport=tcp` on port 443 to mimic HTTPS traffic, bypassing most firewall restrictions.
+3.  **ICE Gathering Wait**: The Frontend explicitly waits for ICE gathering to complete before sending an offer, ensuring the Backend receives valid candidate IP addresses.
 
-# Stop services
-docker-compose down
+**Configuration in `src/bot.py` and `frontend/src/App.tsx`**:
+
+```python
+IceServer(
+    urls="turn:global.relay.metered.ca:443?transport=tcp",
+    username=...,
+    credential=...
+)
 ```
-
-### Docker Files Structure
-
-| File                  | Purpose                                     |
-| --------------------- | ------------------------------------------- |
-| `Dockerfile`          | Backend Python container (Python 3.11-slim) |
-| `frontend/Dockerfile` | Frontend Node/Nginx container               |
-| `docker-compose.yml`  | Multi-container orchestration               |
-
----
-
-## Manual Installation
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/realtime-voice-assistant-openai.git
-cd realtime-voice-assistant-openai
-```
-
-### 2. Backend Setup
-
-```bash
-# Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/macOS
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-
-# Start server
-python main.py
-```
-
-Server runs at http://localhost:7860
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-UI runs at http://localhost:5173
-
----
-
-## Usage
-
-1. Open http://localhost:5173 in browser
-2. Select audio input/output devices
-3. Click "Start Conversation"
-4. Speak to the voice agent in Vietnamese
-
----
-
-## Demo Scenario
-
-The voice agent demonstrates customer support with:
-
-| Type      | Description               |
-| --------- | ------------------------- |
-| Product   | Product/service inquiries |
-| Order     | Order status checks       |
-| Technical | Technical support         |
-| Complaint | Complaints and feedback   |
-| General   | General questions         |
-
-See [scenario.md](scenario.md) for detailed conversation flow.
 
 ---
 
 ## Project Structure
 
 ```
-├── main.py                 # Entry point
-├── Dockerfile              # Backend container
-├── docker-compose.yml      # Container orchestration
-├── requirements.txt        # Python dependencies
 ├── .env.example            # Environment template
+├── CHANGELOG.md            # Version history
+├── Dockerfile              # Backend container definition
+├── docker-compose.yml      # Local dev orchestration
+├── docker-compose.prod.yml # (Generated on EC2) Production orchestration
+├── main.py                 # App Entry point
+├── requirements.txt        # Python dependencies
 ├── src/
-│   ├── bot.py              # WebRTC server & pipeline
-│   ├── flow.py             # Conversation flow logic
-│   └── prompt.py           # System & task prompts
+│   ├── bot.py              # Core logic: WebRTC, Pipeline, TURN
+│   ├── flow.py             # Conversation flow & handlers
+│   └── prompt.py           # System prompts & persona
 ├── frontend/
 │   ├── Dockerfile          # Frontend container
-│   ├── nginx.conf          # Nginx config
-│   └── src/
-│       └── App.tsx         # React UI
-├── transcripts/            # Saved conversation logs
-└── scenario.md             # Demo scenario docs
+│   ├── src/                # React Source
+│   └── vite.config.ts      # Vite config
+└── terraform/              # Infrastructure as Code
+    ├── main.tf             # AWS Resources
+    ├── variables.tf        # Variable definitions
+    └── user_data.sh        # Provisioning script (Nginx/Docker/Env)
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ---
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <a href="https://github.com/pipecat-ai/pipecat"><img src="https://img.shields.io/badge/Pipecat_AI-Framework-FF6B6B?style=for-the-badge" /></a>
-  <a href="https://platform.openai.com"><img src="https://img.shields.io/badge/OpenAI-API-412991?style=for-the-badge&logo=openai&logoColor=white" /></a>
-</p>
+Distributed under the MIT License.
