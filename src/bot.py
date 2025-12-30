@@ -34,8 +34,32 @@ routes = RouteTableDef()
 ws_connections = set()
 
 # ICE servers for NAT traversal
+# TURN credentials from Metered.ca (free tier)
+TURN_USERNAME = os.getenv("TURN_USERNAME", "211edaaa6d320db0be95b365")
+TURN_CREDENTIAL = os.getenv("TURN_CREDENTIAL", "WFn/hIuZNhCl20Iz")
+
 ice_servers = [
-    IceServer(urls="stun:stun.l.google.com:19302"),
+    IceServer(urls="stun:stun.relay.metered.ca:80"),
+    IceServer(
+        urls="turn:global.relay.metered.ca:80",
+        username=TURN_USERNAME,
+        credential=TURN_CREDENTIAL
+    ),
+    IceServer(
+        urls="turn:global.relay.metered.ca:80?transport=tcp",
+        username=TURN_USERNAME,
+        credential=TURN_CREDENTIAL
+    ),
+    IceServer(
+        urls="turn:global.relay.metered.ca:443",
+        username=TURN_USERNAME,
+        credential=TURN_CREDENTIAL
+    ),
+    IceServer(
+        urls="turns:global.relay.metered.ca:443?transport=tcp",
+        username=TURN_USERNAME,
+        credential=TURN_CREDENTIAL
+    ),
 ]
 
 
