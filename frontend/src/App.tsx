@@ -272,6 +272,13 @@ function MainApp() {
 
   useEffect(() => {
     const getDevices = async () => {
+      // Check if mediaDevices is available (requires HTTPS on non-localhost)
+      if (!navigator.mediaDevices) {
+        console.error('navigator.mediaDevices not available. HTTPS required for non-localhost.');
+        setError('Microphone access requires HTTPS. Please use HTTPS or access via localhost.');
+        return;
+      }
+      
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -283,15 +290,18 @@ function MainApp() {
         if (defaultOutput) setSelectedOutputDevice(defaultOutput.deviceId);
       } catch (error) {
         console.error('Error getting audio devices:', error);
+        setError('Failed to access microphone. Please allow microphone permissions.');
       }
     };
 
     getDevices();
 
-    navigator.mediaDevices.addEventListener('devicechange', getDevices);
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', getDevices);
-    };
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener('devicechange', getDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+      };
+    }
   }, []);
 
   const inputDevices = audioDevices.filter(device => device.kind === 'audioinput');
