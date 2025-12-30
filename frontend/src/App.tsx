@@ -21,9 +21,9 @@ class WebRTCClient {
     // ICE servers for NAT traversal
     // STUN: discovers public IP
     // TURN: relays media when P2P fails (required for most cloud deployments)
-    // Credentials from environment variables (set in .env file)
-    const turnUsername = import.meta.env.VITE_TURN_USERNAME || "";
-    const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL || "";
+    // Credentials from environment variables with fallback
+    const turnUsername = import.meta.env.VITE_TURN_USERNAME || "211edaaa6d320db0be95b365";
+    const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL || "WFn/hIuZNhCl20Iz";
     
     this.pc = new RTCPeerConnection({
       iceServers: [
