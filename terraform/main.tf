@@ -80,6 +80,24 @@ resource "aws_security_group" "voice_agent" {
     description = "SSH"
   }
 
+  # HTTP (for Let's Encrypt verification)
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP"
+  }
+
+  # HTTPS
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS"
+  }
+
   # Frontend
   ingress {
     from_port   = 5173
