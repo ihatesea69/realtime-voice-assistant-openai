@@ -21,28 +21,32 @@ class WebRTCClient {
     // ICE servers for NAT traversal
     // STUN: discovers public IP
     // TURN: relays media when P2P fails (required for most cloud deployments)
+    // Credentials from environment variables (set in .env file)
+    const turnUsername = import.meta.env.VITE_TURN_USERNAME || "";
+    const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL || "";
+    
     this.pc = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun.relay.metered.ca:80" },
         {
           urls: "turn:global.relay.metered.ca:80",
-          username: "211edaaa6d320db0be95b365",
-          credential: "WFn/hIuZNhCl20Iz"
+          username: turnUsername,
+          credential: turnCredential
         },
         {
           urls: "turn:global.relay.metered.ca:80?transport=tcp",
-          username: "211edaaa6d320db0be95b365",
-          credential: "WFn/hIuZNhCl20Iz"
+          username: turnUsername,
+          credential: turnCredential
         },
         {
           urls: "turn:global.relay.metered.ca:443",
-          username: "211edaaa6d320db0be95b365",
-          credential: "WFn/hIuZNhCl20Iz"
+          username: turnUsername,
+          credential: turnCredential
         },
         {
           urls: "turns:global.relay.metered.ca:443?transport=tcp",
-          username: "211edaaa6d320db0be95b365",
-          credential: "WFn/hIuZNhCl20Iz"
+          username: turnUsername,
+          credential: turnCredential
         }
       ],
     });
