@@ -48,6 +48,26 @@ variable "github_repo" {
 variable "owner" {
   description = "Owner tag for resources"
   type        = string
+
+}
+
+variable "turn_username" {
+  description = "TURN Server Username"
+  type        = string
+  default     = ""
+}
+
+variable "turn_credential" {
+  description = "TURN Server Credential"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "domain_name" {
+  description = "Domain name for Nginx"
+  type        = string
+  default     = ""
 }
 
 # Get latest Ubuntu 22.04 AMI
@@ -152,8 +172,11 @@ resource "aws_instance" "voice_agent" {
   }
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    openai_api_key = var.openai_api_key
-    github_repo    = var.github_repo
+    openai_api_key  = var.openai_api_key
+    github_repo     = var.github_repo
+    turn_username   = var.turn_username
+    turn_credential = var.turn_credential
+    domain_name     = var.domain_name
   }))
 
   tags = {
