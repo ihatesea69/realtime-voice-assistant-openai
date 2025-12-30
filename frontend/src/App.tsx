@@ -1,5 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Headphones, Wifi, WifiOff, Bot, Shield, Mic, MicOff, Phone, PhoneOff, ChevronDown } from 'lucide-react';
+
+// Backend host configuration
+// In Docker: frontend container needs to reach backend container via Docker network
+// On localhost: use same hostname as frontend
+const BACKEND_HOST = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+const BACKEND_PORT = 7860;
 
 class WebRTCClient {
   private pc: RTCPeerConnection | null = null;
@@ -211,7 +217,7 @@ function MainApp() {
         return; 
       }
       
-      const ws = new WebSocket('ws://localhost:7860/ws');
+            const ws = new WebSocket(`ws://${BACKEND_HOST}:${BACKEND_PORT}/ws`);
       
       ws.onopen = () => {
         console.log('WebSocket connected for transcript streaming');
@@ -304,7 +310,7 @@ function MainApp() {
         setError(null);
         
         await client.startBotAndConnect({
-          endpoint: "http://localhost:7860/offer",
+                    endpoint: `http://${BACKEND_HOST}:${BACKEND_PORT}/offer`,
           audioInput: selectedInputDevice || undefined,
           audioOutput: selectedOutputDevice || undefined
         });

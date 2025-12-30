@@ -1,5 +1,5 @@
-# Frontend Dockerfile
-FROM node:20-alpine AS builder
+# Frontend Dockerfile - Development mode for WSL2
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -12,18 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the app
-RUN npm run build
+# Expose port
+EXPOSE 5173
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built files to nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Run dev server with host binding for external access
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

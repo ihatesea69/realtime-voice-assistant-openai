@@ -120,14 +120,80 @@ Access:
 
 ## Docker Deployment
 
-### Build and Run
+### 1. Build and Run
+
+#### Configure Environment
 
 ```bash
-# Build and start both services
-docker-compose up --build
+cp .env.example .env
+# Edit .env to include your OPENAI_API_KEY
+```
 
+#### Build Containers
+
+```bash
+docker-compose up --build
+```
+
+#### Run Options
+
+**Linux (Recommended)**
+Use host networking for best WebRTC performance:
+
+```bash
+# In docker-compose.yml or command line
+network_mode: "host"
+```
+
+**macOS / Windows (Docker Desktop)**
+Docker Desktop restricts host networking. Use port forwarding:
+
+```bash
+# Default configuration in docker-compose.yml
+ports:
+  - "7860:7860"
+  - "5173:80"
+```
+
+**Note:** On Windows/macOS, direct P2P connections might fail behind strict NATs. A TURN server is often required for production.
+
+---
+
+### 2. WebRTC ICE Configuration
+
+For local development, STUN servers usually suffice. If deploying to production or facing connection issues:
+
+**STUN (Session Traversal Utilities for NAT)**
+Helps clients discover their public IP.
+Default: `stun:stun.l.google.com:19302`
+
+**TURN (Traversal Using Relays around NAT)**
+Required if P2P fails (symmetric NATs, firewalls).
+RELAYS media traffic between peers.
+
+To configure custom ICE servers, update `frontend/src/App.tsx`:
+
+```javascript
+const config = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    // Add TURN server here if needed
+    // {
+    //   urls: "turn:your-turn-server.com",
+    //   username: "user",
+    //   credential: "password"
+    // }
+  ],
+};
+```
+
+---
+
+### 3. Docker Maintenance
+
+```bash
 # Run in background
-docker-compose up -d --build
+docker-compose up -d
 
 # View logs
 docker-compose logs -f
@@ -136,25 +202,13 @@ docker-compose logs -f
 docker-compose down
 ```
 
-### Docker Files
+### Docker Files Structure
 
-| File                  | Purpose                       |
-| --------------------- | ----------------------------- |
-| `Dockerfile`          | Backend Python container      |
-| `frontend/Dockerfile` | Frontend Node/Nginx container |
-| `docker-compose.yml`  | Multi-container orchestration |
-| `frontend/nginx.conf` | Nginx SPA configuration       |
-
-### Environment Variables
-
-```bash
-# Required
-OPENAI_API_KEY=sk-...
-
-# Optional (for cloud deployment)
-HOST=0.0.0.0
-PORT=7860
-```
+| File                  | Purpose                                     |
+| --------------------- | ------------------------------------------- |
+| `Dockerfile`          | Backend Python container (Python 3.11-slim) |
+| `frontend/Dockerfile` | Frontend Node/Nginx container               |
+| `docker-compose.yml`  | Multi-container orchestration               |
 
 ---
 
