@@ -25,10 +25,11 @@ class WebRTCClient {
     const turnUsername = import.meta.env.VITE_TURN_USERNAME || "211edaaa6d320db0be95b365";
     const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL || "WFn/hIuZNhCl20Iz";
     
+    // Match Backend ICE config: TCP TURN preference for firewall traversal
     this.pc = new RTCPeerConnection({
       iceServers: [
         {
-          urls: "turn:global.relay.metered.ca:80",
+          urls: "turn:global.relay.metered.ca:443?transport=tcp",
           username: turnUsername,
           credential: turnCredential
         },
@@ -74,6 +75,36 @@ class WebRTCClient {
     };
   }
 
+  // Helper to wait for ICE gathering
+  private waitForIceGathering(): Promise<void> {
+    if (!this.pc) return Promise.resolve();
+    if (this.pc.iceGatheringState === "complete") return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      if (!this.pc) {
+          resolve(); 
+          return;
+      }
+      
+      const checkState = () => {
+        if (this.pc?.iceGatheringState === "complete") {
+          this.pc.removeEventListener("icegatheringstatechange", checkState);
+          resolve();
+        }
+      };
+      
+      this.pc.addEventListener("icegatheringstatechange", checkState);
+      
+      // Fallback timeout in case gathering takes too long (e.g. 2 seconds)
+      // We don't need ALL candidates, usually the first few (TURN) are enough.
+      // But for simplicity/robustness in this demo, let's wait up to 2s.
+      setTimeout(() => {
+        this.pc?.removeEventListener("icegatheringstatechange", checkState);
+        resolve();
+      }, 2000);
+    });
+  }
+
   async startBotAndConnect(options: { endpoint: string; audioInput?: string; audioOutput?: string }) {
     try {
       console.log("🎤 Getting user media...");
@@ -98,6 +129,13 @@ class WebRTCClient {
       const offer = await this.pc!.createOffer();
       await this.pc!.setLocalDescription(offer);
 
+      console.log("⏳ Waiting for ICE gathering to complete...");
+      await this.waitForIceGathering();
+      console.log("✅ ICE gathering complete (or timed out)");
+
+      // Use the updated localDescription which contains the gathered candidates
+      const finalOffer = this.pc!.localDescription;
+
       console.log("Sending offer to server...");
       
       const response = await fetch(options.endpoint, {
@@ -106,8 +144,8 @@ class WebRTCClient {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: offer.type,
-          sdp: offer.sdp,
+          type: finalOffer?.type,
+          sdp: finalOffer?.sdp,
         }),
       });
 
