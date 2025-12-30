@@ -62,6 +62,10 @@ ice_servers = [
     ),
 ]
 
+# Debug: Log ICE servers configuration
+logger.info(f"🧊 ICE servers configured: {len(ice_servers)} servers")
+for i, server in enumerate(ice_servers):
+    logger.info(f"🧊 ICE server {i}: {server.urls}")
 
 async def run_bot(webrtc_connection, ws_connections):
     """Run the bot pipeline with the given WebRTC connection."""
