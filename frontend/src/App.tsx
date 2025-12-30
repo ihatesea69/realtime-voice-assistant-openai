@@ -67,11 +67,23 @@ class WebRTCClient {
         if (!this.remoteAudio) {
           this.remoteAudio = new Audio();
           this.remoteAudio.autoplay = true;
+          // Some browsers require the audio element to be in DOM
           document.body.appendChild(this.remoteAudio);
         }
         
         const remoteStream = new MediaStream([event.track]);
         this.remoteAudio.srcObject = remoteStream;
+        
+        // Explicit play with error handling for autoplay policy
+        this.remoteAudio.play()
+          .then(() => {
+            console.log("✅ Audio playback started successfully");
+          })
+          .catch((err) => {
+            console.error("❌ Audio playback failed:", err);
+            // User needs to interact with page first
+          });
+        
         console.log("Audio connected and playing");
       }
     };
