@@ -18,8 +18,33 @@ class WebRTCClient {
   public onStateChange?: (state: string) => void;
 
   constructor() {
+    // ICE servers for NAT traversal
+    // STUN: discovers public IP
+    // TURN: relays media when P2P fails (required for most cloud deployments)
     this.pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        { urls: "stun:stun.relay.metered.ca:80" },
+        {
+          urls: "turn:global.relay.metered.ca:80",
+          username: "211edaaa6d320db0be95b365",
+          credential: "WFn/hIuZNhCl20Iz"
+        },
+        {
+          urls: "turn:global.relay.metered.ca:80?transport=tcp",
+          username: "211edaaa6d320db0be95b365",
+          credential: "WFn/hIuZNhCl20Iz"
+        },
+        {
+          urls: "turn:global.relay.metered.ca:443",
+          username: "211edaaa6d320db0be95b365",
+          credential: "WFn/hIuZNhCl20Iz"
+        },
+        {
+          urls: "turns:global.relay.metered.ca:443?transport=tcp",
+          username: "211edaaa6d320db0be95b365",
+          credential: "WFn/hIuZNhCl20Iz"
+        }
+      ],
     });
 
     this.pc.onconnectionstatechange = () => {
