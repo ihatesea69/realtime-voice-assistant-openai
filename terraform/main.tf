@@ -1,4 +1,4 @@
-# Terraform configuration for HieuNghi Voice Agent on AWS EC2
+# Terraform configuration for HieuNghi Voice Agent on AWS EC2 with ALB
 
 terraform {
   required_version = ">= 1.0"
@@ -48,26 +48,38 @@ variable "github_repo" {
 variable "owner" {
   description = "Owner tag for resources"
   type        = string
-
 }
 
 variable "turn_username" {
   description = "TURN Server Username"
   type        = string
-  default     = ""
+  default     = "hieunghi"
 }
 
 variable "turn_credential" {
   description = "TURN Server Credential"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "voiceagent"
 }
 
 variable "domain_name" {
-  description = "Domain name for Nginx"
+  description = "Domain name for ALB (e.g., nghidanh.me)"
   type        = string
-  default     = ""
+  default     = "nghidanh.me"
+}
+
+# Get Default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get Default Subnets (for ALB)
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }
 
 # Get latest Ubuntu 22.04 AMI
@@ -86,10 +98,11 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# Security Group
+# Security Group for EC2
 resource "aws_security_group" "voice_agent" {
   name        = "hieunghi-voice-agent-sg"
   description = "Security group for HieuNghi Voice Agent"
+  vpc_id      = data.aws_vpc.default.id
 
   # SSH
   ingress {
@@ -100,49 +113,13 @@ resource "aws_security_group" "voice_agent" {
     description = "SSH"
   }
 
-  # HTTP (for Let's Encrypt verification)
+  # HTTP from ALB
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
-  }
-
-  # HTTPS
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS"
-  }
-
-  # Frontend
-  ingress {
-    from_port   = 5173
-    to_port     = 5173
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Frontend"
-  }
-
-  # Backend API
-  ingress {
-    from_port   = 7860
-    to_port     = 7860
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Backend API"
-  }
-
-  # WebRTC UDP ports (Media)
-  ingress {
-    from_port   = 40000
-    to_port     = 40100
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "WebRTC media"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "HTTP from ALB"
   }
 
   # CoTURN Signaling (TCP/UDP)
@@ -185,123 +162,134 @@ resource "aws_security_group" "voice_agent" {
   }
 }
 
-# CloudFront Distribution
-resource "aws_cloudfront_distribution" "voice_agent_cdn" {
-  origin {
-    domain_name = aws_instance.voice_agent.public_dns
-    origin_id   = "EC2Origin"
+# Security Group for ALB
+resource "aws_security_group" "alb" {
+  name        = "hieunghi-alb-sg"
+  description = "Security group for ALB"
+  vpc_id      = data.aws_vpc.default.id
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only" # CloudFront -> EC2 is HTTP
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP"
   }
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "HieuNghi Voice Agent CDN"
-  default_root_object = "index.html"
-
-  # Default Cache Behavior (Frontend)
-  default_cache_behavior {
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "EC2Origin"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["*"] # Forward all headers (Host, Upgrade, etc.)
-      cookies {
-        forward = "all"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 0 # Disable caching for now to avoid issues
-    max_ttl                = 0
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS"
   }
 
-  # API Cache Behavior
-  ordered_cache_behavior {
-    path_pattern     = "/offer"
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "EC2Origin"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["*"]
-      cookies {
-        forward = "all"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
-  }
-
-  # WebSocket Cache Behavior
-  ordered_cache_behavior {
-    path_pattern     = "/ws"
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "EC2Origin"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["*"]
-      cookies {
-        forward = "all"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
-  }
-
-  # TURN Config API
-  ordered_cache_behavior {
-    path_pattern     = "/turn-config"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "EC2Origin"
-
-    forwarded_values {
-      query_string = false
-      headers      = ["Host", "Origin"]
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 60 # Cache for 1 minute
-    max_ttl                = 300
-  }
-
-  # Viewer Certificate (Default *.cloudfront.net HTTPS)
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
-    Name  = "hieunghi-voice-agent-cdn"
+    Name  = "hieunghi-alb-sg"
     Owner = var.owner
   }
+}
+
+# ACM Certificate
+resource "aws_acm_certificate" "main" {
+  domain_name       = var.domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name  = "hieunghi-voice-agent-cert"
+    Owner = var.owner
+  }
+}
+
+# Application Load Balancer
+resource "aws_lb" "main" {
+  name               = "hieunghi-voice-agent-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = data.aws_subnets.default.ids
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name  = "hieunghi-voice-agent-alb"
+    Owner = var.owner
+  }
+}
+
+# Target Group
+resource "aws_lb_target_group" "main" {
+  name     = "hieunghi-voice-agent-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.default.id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
+
+  # Stickiness for WebSocket
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 86400
+    enabled         = true
+  }
+
+  tags = {
+    Name  = "hieunghi-voice-agent-tg"
+    Owner = var.owner
+  }
+}
+
+# HTTP Listener (redirect to HTTPS)
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# HTTPS Listener
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate.main.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  depends_on = [aws_acm_certificate.main]
 }
 
 # EC2 Instance
@@ -330,28 +318,44 @@ resource "aws_instance" "voice_agent" {
   }
 }
 
+# Target Group Attachment
+resource "aws_lb_target_group_attachment" "main" {
+  target_group_arn = aws_lb_target_group.main.arn
+  target_id        = aws_instance.voice_agent.id
+  port             = 80
+}
+
 # Outputs
 output "public_ip" {
   description = "Public IP of the EC2 instance"
   value       = aws_instance.voice_agent.public_ip
 }
 
-output "frontend_url" {
-  description = "Frontend URL"
-  value       = "http://${aws_instance.voice_agent.public_ip}:5173"
+output "alb_dns_name" {
+  description = "ALB DNS Name (point your domain CNAME here)"
+  value       = aws_lb.main.dns_name
 }
 
-output "backend_url" {
-  description = "Backend URL"
-  value       = "http://${aws_instance.voice_agent.public_ip}:7860"
-}
-
-output "cloudfront_url" {
-  description = "CloudFront URL (HTTPS)"
-  value       = "https://${aws_cloudfront_distribution.voice_agent_cdn.domain_name}"
+output "https_url" {
+  description = "HTTPS URL (after DNS setup)"
+  value       = "https://${var.domain_name}"
 }
 
 output "ssh_command" {
   description = "SSH command to connect"
   value       = "ssh -i ~/.ssh/${var.key_name}.pem ubuntu@${aws_instance.voice_agent.public_ip}"
+}
+
+output "acm_validation_record" {
+  description = "CNAME record to add on Namecheap for ACM validation"
+  value = { for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+    name  = dvo.resource_record_name
+    type  = dvo.resource_record_type
+    value = dvo.resource_record_value
+  } }
+}
+
+output "domain_cname_target" {
+  description = "Point your domain A record or CNAME to this ALB"
+  value       = aws_lb.main.dns_name
 }
