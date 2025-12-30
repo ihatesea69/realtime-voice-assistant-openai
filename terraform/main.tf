@@ -245,6 +245,48 @@ resource "aws_cloudfront_distribution" "voice_agent_cdn" {
     max_ttl                = 0
   }
 
+  # WebSocket Cache Behavior
+  ordered_cache_behavior {
+    path_pattern     = "/ws"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "EC2Origin"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  # TURN Config API
+  ordered_cache_behavior {
+    path_pattern     = "/turn-config"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "EC2Origin"
+
+    forwarded_values {
+      query_string = false
+      headers      = ["Host", "Origin"]
+      cookies {
+        forward = "none"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 60 # Cache for 1 minute
+    max_ttl                = 300
+  }
+
   # Viewer Certificate (Default *.cloudfront.net HTTPS)
   viewer_certificate {
     cloudfront_default_certificate = true
