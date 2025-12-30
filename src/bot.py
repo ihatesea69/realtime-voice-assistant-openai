@@ -39,13 +39,13 @@ TURN_USERNAME = os.getenv("TURN_USERNAME", "211edaaa6d320db0be95b365")
 TURN_CREDENTIAL = os.getenv("TURN_CREDENTIAL", "WFn/hIuZNhCl20Iz")
 
 ice_servers = [
-    # Start with simple UDP TURN configuration to ensure basic connectivity
+    # Use TCP TURN on port 443 (HTTPS-like) to bypass aggressive firewalls/UDP blocks
     IceServer(
-        urls="turn:global.relay.metered.ca:80",
+        urls="turn:global.relay.metered.ca:443?transport=tcp",
         username=TURN_USERNAME,
         credential=TURN_CREDENTIAL
     ),
-    # Backup STUN
+    # Backup STUN (standard)
     IceServer(urls="stun:stun.relay.metered.ca:80"),
 ]
 
