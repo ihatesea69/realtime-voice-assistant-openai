@@ -74,12 +74,29 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Get Default Subnets (for ALB)
+# Get Default Subnets (for ALB - only PUBLIC subnets)
 data "aws_subnets" "default" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
+  }
+}
+
+# Get subnet details to filter by unique AZ
+data "aws_subnet" "selected" {
+  for_each = toset(data.aws_subnets.default.ids)
+  id       = each.value
+}
+
+locals {
+  # Get one subnet per AZ
+  az_subnet_map  = { for s in data.aws_subnet.selected : s.availability_zone => s.id... }
+  unique_subnets = [for az, subnets in local.az_subnet_map : subnets[0]]
 }
 
 # Get latest Ubuntu 22.04 AMI
@@ -212,13 +229,22 @@ resource "aws_acm_certificate" "main" {
   }
 }
 
+# ACM Certificate Validation (waits for DNS validation to complete)
+resource "aws_acm_certificate_validation" "main" {
+  certificate_arn = aws_acm_certificate.main.arn
+
+  timeouts {
+    create = "30m"
+  }
+}
+
 # Application Load Balancer
 resource "aws_lb" "main" {
   name               = "hieunghi-voice-agent-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = data.aws_subnets.default.ids
+  subnets            = local.unique_subnets
 
   enable_deletion_protection = false
 
@@ -289,7 +315,7 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.main.arn
   }
 
-  depends_on = [aws_acm_certificate.main]
+  depends_on = [aws_acm_certificate_validation.main]
 }
 
 # EC2 Instance
